@@ -1,0 +1,106 @@
+### Locale and keyboard configuration
+d-i debian-installer/locale string pl_PL
+d-i debian-installer/language string pl
+d-i debian-installer/country string PL
+d-i localechooser/supported-locales multiselect pl_PL.UTF-8
+
+d-i keyboard-configuration/xkb-keymap select pl
+
+### Network configuration
+d-i netcfg/choose_interface select auto
+d-i netcfg/hostname string navi-dbian
+d-i netcfg/wireless_wep string
+d-i hw-detect/load_firmware boolean true
+
+### Mirror settings
+d-i mirror/country string manual
+d-i mirror/http/hostname string ftp.pl.debian.org
+d-i mirror/http/directory string /debian
+d-i mirror/http/proxy string
+
+### Account setup
+# Skip root creation
+d-i passwd/root-login boolean false
+
+# Root password, either in clear text
+#d-i passwd/root-password password r00tme
+#d-i passwd/root-password-again password r00tme
+# or encrypted using a crypt(3)  hash.
+#d-i passwd/root-password-crypted password [crypt(3) hash]
+
+# To create a normal user account.
+d-i passwd/user-fullname string Iwakura Lain
+d-i passwd/username string lain
+# Normal user's password, either in clear text
+d-i passwd/user-password password Zr0bmil0ud@21371w@cur@
+d-i passwd/user-password-again password Zr0bmil0ud@21371w@cur@
+# or encrypted using a crypt(3) hash.
+#d-i passwd/user-password-crypted password [crypt(3) hash]
+
+### Clock and time zone setup
+d-i clock-setup/utc boolean true
+d-i time/zone string Europe/Warsaw
+d-i clock-setup/ntp boolean true
+
+### Partitioning
+d-i partman-auto/method string regular
+d-i partman-auto/disk string /dev/sda
+d-i partman-auto/choose_recipe select atomic
+
+d-i partman-auto/recipes string \
+    512 1 fat32 1 \\
+    61440 60 btrfs 2 \\
+    0 0 swap 3
+
+d-i preseed/early_command string \
+    in-target sh -c ' \
+        # Create Btrfs subvolumes
+        mount /dev/sda2 /mnt && \
+        btrfs subvolume create /mnt/@ && \
+        btrfs subvolume create /mnt/@home && \
+        btrfs subvolume create /mnt/@tmp && \
+        btrfs subvolume create /mnt/@var && \
+        btrfs subvolume create /mnt/@snapshots && \
+        umount /mnt'
+
+# Mount the subvolumes and set up the filesystem
+d-i preseed/late_command string \
+    in-target sh -c ' \
+        # Mount root subvolume to / and others to appropriate locations
+        mount -o subvol=@ /dev/sda2 / && \
+        mkdir /home /tmp /var && \
+        mount -o subvol=@home /dev/sda2 /home && \
+        mount -o subvol=@tmp /dev/sda2 /tmp && \
+        mount -o subvol=@var /dev/sda2 /var && \
+        mount -o subvol=@snapshots /dev/sda2 /var/snapshots && \
+        # Enable swap partition
+        swapon /dev/sda3'
+
+### Base system installation
+# Configure APT to not install recommended packages by default. Use of this
+# option can result in an incomplete system and should only be used by very
+# experienced users.
+#d-i base-installer/install-recommends boolean false
+
+# The kernel image (meta) package to be installed; "none" can be used if no
+# kernel is to be installed.
+d-i base-installer/kernel/image string linux-image-amd64
+
+### Apt setup
+d-i apt-setup/cdrom/set-first boolean false
+d-i apt-setup/non-free-firmware boolean true
+d-i apt-setup/non-free boolean true
+-i apt-setup/contrib boolean true
+
+### Package selection
+tasksel tasksel/first multiselect standard, ssh-server, lxqt-desktop
+
+# Individual additional packages to install
+d-i pkgsel/include string build-essential btrfs-progs cryptsetup curl git btop micro firefox gparted fastfetch
+d-i pkgsel/upgrade select full-upgrade
+
+### Boot loader installation
+d-i grub-installer/only_debian boolean true
+d-i grub-installer/with_other_os boolean true
+
+d-i finish-install/reboot_in_progress note
