@@ -1,4 +1,5 @@
 #_preseed_V1
+
 ### Locale and keyboard configuration
 d-i debian-installer/locale string pl_PL
 d-i debian-installer/language string pl
